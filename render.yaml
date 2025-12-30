@@ -12,9 +12,11 @@ services:
       gunicorn app:app --bind 0.0.0.0:5001
     envVars:
       - key: DB_PASS
-        sync: false # User must provide this in dashboard for security
+        sync: false
       - key: PORT
         value: 5001
+      - key: GO_SERVER_URL
+        sync: false # User must set this to the PUBLIC URL of the Go service (e.g. https://nickgame-1.onrender.com)
 
   # Go Server (WebSocket & Proxy)
   - type: web
@@ -28,14 +30,5 @@ services:
       cd go-server
       ./main -addr :$PORT
     envVars:
-      - key: PYTHON_SERVER_URL
-        fromService:
-          type: web
-          name: python-server
-          property: host
-          # Render internal URL usually doesn't include protocol, so we might need to prepend http://
-          # But 'host' property usually returns host:port. 
-          # Let's use a value string construction if possible, or just hardcode the internal name.
-          # Better approach:
       - key: PYTHON_SERVER_URL
         value: http://python-server:5001

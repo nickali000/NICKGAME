@@ -3,11 +3,15 @@ from games.secret_hitler import SecretHitlerGame
 from games.dodgeball import DodgeballGame
 from db_manager import DBManager
 import uuid
+import os
 
 app = Flask(__name__)
 
 # Database Manager
 db = DBManager()
+
+# Debug: Print GO_SERVER_URL
+print(f"DEBUG: GO_SERVER_URL is set to: {os.getenv('GO_SERVER_URL')}")
 
 # In-memory storage for active game instances (state is transient for now, or could be in DB)
 # We still need this for the game logic objects

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
@@ -29,6 +30,9 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Create new request to Python server
 		pythonURL := getEnv("PYTHON_SERVER_URL", "http://localhost:5001")
+		if strings.HasSuffix(pythonURL, "/") {
+			pythonURL = pythonURL[:len(pythonURL)-1]
+		}
 		url := pythonURL + r.URL.Path
 		if r.URL.RawQuery != "" {
 			url += "?" + r.URL.RawQuery

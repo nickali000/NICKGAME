@@ -162,8 +162,26 @@
     </div>
 
     <script>
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        // WebSocket connection logic
+        const goServerUrl = "{{ go_server_url }}";
+        let wsUrl;
+
+        if (goServerUrl && goServerUrl !== "None" && goServerUrl !== "") {
+            wsUrl = goServerUrl;
+            if (!wsUrl.endsWith("/ws")) {
+                wsUrl += "/ws";
+            }
+        } else {
+            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+                wsUrl = wsProtocol + window.location.host + "/ws";
+            } else {
+                // Render Production - HARDCODED FALLBACK
+                wsUrl = "wss://nickgame-1.onrender.com/ws";
+            }
+        }
+
+        console.log("Connecting to WebSocket at:", wsUrl);
         let socket;
         let userId = 'user_' + Math.floor(Math.random() * 10000);
 

@@ -46,7 +46,7 @@ def get_or_restore_game(room_id):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', go_server_url=os.getenv('GO_SERVER_URL'))
 
 @app.route('/lobby')
 def lobby():

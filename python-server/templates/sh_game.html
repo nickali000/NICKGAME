@@ -1038,8 +1038,24 @@
         // WebSocket Connection
         const roomId = "{{ room_id }}";
         const userId = "{{ player_id }}";
-        const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        const wsUrl = wsProtocol + window.location.host + "/ws?room_id=" + roomId + "&user_id=" + userId;
+        const goServerUrl = "{{ go_server_url }}";
+        let wsUrl;
+
+        if (goServerUrl && goServerUrl !== "None") {
+            if (goServerUrl.startsWith("ws")) {
+                wsUrl = goServerUrl;
+            } else if (goServerUrl.startsWith("http")) {
+                wsUrl = goServerUrl.replace("http", "ws") + "/ws";
+            } else {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${protocol}//${goServerUrl}/ws`;
+            }
+        } else {
+            const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+            wsUrl = wsProtocol + window.location.host + "/ws";
+        }
+
+        wsUrl += "?room_id=" + roomId + "&user_id=" + userId;
 
         let socket = null;
 

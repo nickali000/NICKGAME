@@ -213,8 +213,27 @@
         const isAdmin = "{{ is_admin | tojson }}";
 
         // WebSocket connection
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        const goServerUrl = "{{ go_server_url }}";
+        let wsUrl;
+
+        if (goServerUrl && goServerUrl !== "None") {
+            // If full URL provided (e.g. wss://...) use it, otherwise append /ws
+            if (goServerUrl.startsWith("ws")) {
+                wsUrl = goServerUrl;
+            } else if (goServerUrl.startsWith("http")) {
+                wsUrl = goServerUrl.replace("http", "ws") + "/ws";
+            } else {
+                // Domain only
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${protocol}//${goServerUrl}/ws`;
+            }
+        } else {
+            // Fallback to current host (local dev or Go proxy)
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        }
+
+        console.log("Connecting to WebSocket at:", wsUrl);
         let socket;
 
         function connectWebSocket() {

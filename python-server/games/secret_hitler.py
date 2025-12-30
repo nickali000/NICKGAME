@@ -828,7 +828,8 @@ class SecretHitlerGame(BaseGame):
                                last_chancellor_id=self.last_chancellor_id,
                                public_investigation=self.public_investigation,
                                purge_remaining=self.purge_remaining,
-                               game_config=self.get_config())
+                               game_config=self.get_config(),
+                               go_server_url=os.getenv('GO_SERVER_URL'))
 
     def get_json_state(self):
         return {

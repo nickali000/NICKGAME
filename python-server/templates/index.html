@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICKGAME</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #e74c3c;
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .card {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background-color: #3d3d3d;
+            border: 1px solid #4d4d4d;
+            border-radius: 5px;
+            color: white;
+            font-size: 1em;
+            box-sizing: border-box;
+            /* Important for padding */
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #e74c3c;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #3d3d3d;
+            color: white;
+            border: 1px solid #4d4d4d;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .room-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid #4d4d4d;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            color: #aaa;
+        }
+
+        #status-message {
+            text-align: center;
+            color: #777;
+            margin-top: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>NICKGAME</h1>
+
+    <div class="card">
+        <div class="card-title">Join or Create Room</div>
+
+        <div class="form-group">
+            <label for="nickname">Nickname</label>
+            <input type="text" id="nickname" placeholder="Enter your nickname">
+        </div>
+
+        <div class="form-group">
+            <label for="room-id">Room ID</label>
+            <input type="text" id="room-id" placeholder="Room Name (Optional for Create)">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="createRoom()">Create Room</button>
+            <button class="btn-secondary" onclick="joinRoom()">Join Room</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="room-list-header">
+            <div class="card-title" style="margin: 0; font-size: 1.2em;">Available Rooms</div>
+            <button class="refresh-btn" onclick="refreshRooms()">Refresh</button>
+        </div>
+        <div id="status-message">Connecting...</div>
+        <ul id="room-list" style="list-style: none; padding: 0;">
+            <!-- Rooms will be populated here -->
+        </ul>
+    </div>
+
+    <script>
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        let socket;
+        let userId = 'user_' + Math.floor(Math.random() * 10000);
+
+        function connect() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function () {
+                document.getElementById('status-message').innerText = "Connected to Server";
+                // Handshake
+                socket.send(JSON.stringify({
+                    type: "handshake",
+                    user_id: userId,
+                    device: "mobile"
+                }));
+            };
+
+            socket.onmessage = function (event) {
+                const messages = event.data.trim().split('\n');
+                messages.forEach(msgStr => {
+                    if (!msgStr) return;
+                    try {
+                        const msg = JSON.parse(msgStr);
+                        console.log("Received:", msg);
+
+                        if (msg.type === "room_created") {
+                            console.log("Room created, redirecting to lobby...");
+                            // Redirect to lobby
+                            window.location.href = `/lobby?room_id=${msg.room_id}&user_id=${userId}`;
+                        } else if (msg.type === "room_joined") {
+                            console.log("Room joined, redirecting to lobby...");
+                            // Redirect to lobby for joined user
+                            window.location.href = `/lobby?room_id=${msg.room_id}&user_id=${userId}`;
+                        } else if (msg.type === "rooms_updated") {
+                            console.log("Rooms updated, refreshing list...");
+                            refreshRooms();
+                        } else {
+                            console.log("Other message type:", msg.type);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing message:", e, msgStr);
+                    }
+                });
+            };
+
+            socket.onclose = function () {
+                document.getElementById('status-message').innerText = "Disconnected. Reconnecting...";
+                setTimeout(connect, 3000);
+            };
+        }
+
+        // Connect on load
+        connect();
+
+        async function createRoom() {
+            const nickname = document.getElementById('nickname').value;
+            if (!nickname) {
+                alert("Please enter a nickname");
+                return;
+            }
+
+            // Store nickname for later use
+            localStorage.setItem('nickname', nickname);
+
+            // Send create request via WebSocket
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: "create_room",
+                    nickname: nickname
+                }));
+            } else {
+                alert("Not connected to server");
+            }
+        }
+
+        async function joinRoom() {
+            const nickname = document.getElementById('nickname').value;
+            const roomId = document.getElementById('room-id').value;
+
+            if (!nickname || !roomId) {
+                alert("Please enter nickname and room ID");
+                return;
+            }
+
+            // Store nickname for later use
+            localStorage.setItem('nickname', nickname);
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log("Sending join_room message via WebSocket...");
+                socket.send(JSON.stringify({
+                    type: "join_room",
+                    room_id: roomId,
+                    nickname: nickname
+                }));
+            } else {
+                console.error("WebSocket not connected! State:", socket ? socket.readyState : "null");
+                alert("Not connected to server");
+            }
+        }
+
+        async function refreshRooms() {
+            try {
+                const response = await fetch('/api/rooms');
+                const data = await response.json();
+                const list = document.getElementById('room-list');
+                list.innerHTML = '';
+
+                if (data.rooms.length === 0) {
+                    list.innerHTML = '<li style="color: #777; padding: 10px;">No active rooms found.</li>';
+                    return;
+                }
+
+                data.rooms.forEach(room => {
+                    const li = document.createElement('li');
+                    li.style.padding = '10px';
+                    li.style.borderBottom = '1px solid #444';
+                    li.style.display = 'flex';
+                    li.style.justifyContent = 'space-between';
+                    li.style.alignItems = 'center';
+
+                    li.innerHTML = `
+                        <div>
+                            <span style="font-weight: bold; color: #e74c3c;">${room.id}</span>
+                            <span style="color: #aaa; font-size: 0.9em; margin-left: 10px;">(${room.game})</span>
+                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">👥 ${room.players}</span>
+                        </div>
+                        <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.8em; width: auto;" onclick="fillRoomId('${room.id}')">Select</button>
+                    `;
+                    list.appendChild(li);
+                });
+            } catch (error) {
+                console.error("Error fetching rooms:", error);
+                alert("Failed to refresh rooms");
+            }
+        }
+
+        function fillRoomId(id) {
+            document.getElementById('room-id').value = id;
+        }
+    </script>
+</body>
+
+</html>

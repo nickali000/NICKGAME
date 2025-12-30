@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby - {{ room_id }}</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #e74c3c;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        h2 {
+            color: #aaa;
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+
+        .card {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .player-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .player-list li {
+            padding: 12px;
+            background-color: #3d3d3d;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-name {
+            font-weight: 600;
+        }
+
+        .player-badge {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: #555;
+            color: #ccc;
+        }
+
+        .badge-admin {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background-color: #3d3d3d;
+            border: 1px solid #4d4d4d;
+            border-radius: 5px;
+            color: white;
+            font-size: 1em;
+            box-sizing: border-box;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23e74c3c%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.7-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right .7em top 50%;
+            background-size: .65em auto;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #e74c3c;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #3d3d3d;
+            color: white;
+            border: 1px solid #4d4d4d;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .logout-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        #selected-game-display {
+            text-align: center;
+            color: #e74c3c;
+            font-size: 1.1em;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>NICKGAME</h1>
+    <h2>Room: {{ room_id }}</h2>
+
+    <div class="card">
+        <div class="card-title">Players</div>
+        <ul class="player-list" id="player-list">
+            {% for player in players %}
+            <li>
+                <span class="player-name">{{ player.nickname }}</span>
+                {% if player.id == admin_id %}
+                <span class="player-badge badge-admin">ADMIN</span>
+                {% else %}
+                <span class="player-badge">PLAYER</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+
+        {% if is_admin %}
+        <div id="admin-controls" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 20px;">
+            <div class="form-group">
+                <label for="game-select">Select Game</label>
+                <select id="game-select" onchange="selectGame()">
+                    <option value="">Loading games...</option>
+                </select>
+            </div>
+            <button class="btn-secondary" onclick="selectGame()" style="margin-bottom: 10px;">Set Game</button>
+            <button class="btn-primary" onclick="startGame()">START GAME</button>
+        </div>
+        {% else %}
+        <p style="color: #aaa; font-style: italic; margin-top: 20px;">Waiting for admin to start the game...</p>
+        {% endif %}
+
+        <div id="selected-game-display">
+            {% if game_name %}
+            Selected: {{ game_name }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="logout-container">
+        <button class="btn-secondary" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        const roomId = "{{ room_id }}";
+        const userId = "{{ user_id }}";
+        const isAdmin = "{{ is_admin | tojson }}";
+
+        // WebSocket connection
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        let socket;
+
+        function connectWebSocket() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function () {
+                console.log("WebSocket connected in lobby");
+                // Handshake only - don't join again, user already joined from index page
+                socket.send(JSON.stringify({
+                    type: "handshake",
+                    user_id: userId,
+                    room_id: roomId,
+                    device: "mobile"
+                }));
+            };
+
+            socket.onmessage = function (event) {
+                const messages = event.data.trim().split('\n');
+                messages.forEach(msgStr => {
+                    if (!msgStr) return;
+                    try {
+                        const msg = JSON.parse(msgStr);
+                        console.log("WebSocket message:", msg);
+
+                        if (msg.type === "player_joined") {
+                            // Reload player list
+                            window.location.reload();
+                        } else if (msg.type === "game_selected") {
+                            // Update selected game display
+                            document.getElementById('selected-game-display').innerText =
+                                `Selected: ${msg.game_name}`;
+                        } else if (msg.type === "game_started") {
+                            // Redirect to game page
+                            if (msg.redirect) {
+                                window.location.href = msg.redirect + `?user_id=${userId}`;
+                            }
+                        } else if (msg.type === "error") {
+                            alert("Error: " + msg.message);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing message:", e, msgStr);
+                    }
+                });
+            };
+
+            socket.onclose = function () {
+                console.log("WebSocket disconnected, reconnecting...");
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // Fetch available games
+        async function fetchGames() {
+            try {
+                const response = await fetch('/api/games');
+                const data = await response.json();
+                const select = document.getElementById('game-select');
+
+                if (select) {
+                    select.innerHTML = '<option value="" disabled selected>Select a game...</option>';
+                    data.games.forEach(game => {
+                        const option = document.createElement('option');
+                        option.value = game.id;
+                        option.textContent = `${game.name} (${game.min_players}-${game.max_players} players)`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching games:", error);
+            }
+        }
+
+        function selectGame() {
+            const game = document.getElementById('game-select').value;
+            console.log("selectGame called with:", game);
+
+            if (!game) {
+                console.log("No game selected");
+                return;
+            }
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log("Sending select_game message");
+                socket.send(JSON.stringify({
+                    type: "select_game",
+                    game_type: game,
+                    room_id: roomId
+                }));
+            } else {
+                console.error("Socket not open. State:", socket ? socket.readyState : "null");
+                alert("Connection lost. Please reload the page.");
+            }
+        }
+
+        function startGame() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: "start_game"
+                }));
+            }
+        }
+
+        function logout() {
+            if (confirm("Are you sure you want to leave the room?")) {
+                if (isAdmin) {
+                    // Admin leaving - delete room
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            type: "leave_room",
+                            user_id: userId
+                        }));
+                    }
+                    // Wait a bit for broadcast then redirect
+                    setTimeout(function () {
+                        window.location.href = "/";
+                    }, 500);
+                } else {
+                    // Regular player just leaves
+                    window.location.href = "/";
+                }
+            }
+        }
+
+        // Initialize
+        connectWebSocket();
+        if (isAdmin) {
+            fetchGames();
+        }
+    </script>
+</body>
+
+</html>

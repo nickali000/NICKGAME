@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  python-server:
+    build:
+      context: ./python-server
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_PASS=${DB_PASS}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./python-server:/app
+    restart: always
+
+  go-server:
+    build:
+      context: ./go-server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHON_SERVER_URL=http://python-server:5001
+    depends_on:
+      - python-server
+    restart: always

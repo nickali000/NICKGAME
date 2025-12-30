@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+*.log
+
+# Scripts
+debug_*.py
+test_*.py
+verify_*.py
+check_*.py
+fix_*.py
+force_reset_db.py
+kill_db_connections.py
+populate_games.py
+reproduce_*.py
+reset_db*.py
+update_schema_*.py
+create_*.py
+add_role_column.py
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

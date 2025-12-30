@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 venv/
 *.log
+.env
 
 # Scripts
 debug_*.py

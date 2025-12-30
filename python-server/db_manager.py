@@ -9,8 +9,12 @@ DB_PORT = "6543"
 DB_NAME = "postgres"
 DB_USER = "postgres.mgkpvswtxapndwfgsqow"
 DB_PASS = os.getenv("DB_PASS")
+
 if not DB_PASS:
-    DB_PASS = "D8%N-.jFyj/ihY4"
+    # Fallback for local dev ONLY if explicitly allowed, otherwise warn/error
+    # For now, we just print a warning to logs, but do NOT hardcode the production password here.
+    print("WARNING: DB_PASS environment variable not set!")
+
 
 class DBManager:
     def __init__(self):

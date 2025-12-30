@@ -2,33 +2,25 @@ services:
   # Python Server (Game Logic & HTML)
   - type: web
     name: python-server
-    env: python
+    env: docker
     plan: free
-    buildCommand: |
-      cd python-server
-      pip install -r requirements.txt
-    startCommand: |
-      cd python-server
-      gunicorn app:app --bind 0.0.0.0:5001
+    dockerfilePath: ./python-server/Dockerfile
+    dockerContext: ./python-server
     envVars:
       - key: DB_PASS
         sync: false
       - key: PORT
         value: 5001
       - key: GO_SERVER_URL
-        sync: false # User must set this to the PUBLIC URL of the Go service (e.g. https://nickgame-1.onrender.com)
+        sync: false # User must set this to the PUBLIC URL of the Go service
 
   # Go Server (WebSocket & Proxy)
   - type: web
     name: go-server
-    env: go
+    env: docker
     plan: free
-    buildCommand: |
-      cd go-server
-      go build -o main .
-    startCommand: |
-      cd go-server
-      ./main -addr :$PORT
+    dockerfilePath: ./go-server/Dockerfile
+    dockerContext: ./go-server
     envVars:
       - key: PYTHON_SERVER_URL
         value: http://python-server:5001

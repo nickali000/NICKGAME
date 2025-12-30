@@ -216,21 +216,21 @@
         const goServerUrl = "{{ go_server_url }}";
         let wsUrl;
 
-        if (goServerUrl && goServerUrl !== "None") {
-            // If full URL provided (e.g. wss://...) use it, otherwise append /ws
-            if (goServerUrl.startsWith("ws")) {
-                wsUrl = goServerUrl;
-            } else if (goServerUrl.startsWith("http")) {
-                wsUrl = goServerUrl.replace("http", "ws") + "/ws";
-            } else {
-                // Domain only
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                wsUrl = `${protocol}//${goServerUrl}/ws`;
+        if (goServerUrl && goServerUrl !== "None" && goServerUrl !== "") {
+            wsUrl = goServerUrl;
+            if (!wsUrl.endsWith("/ws")) {
+                wsUrl += "/ws";
             }
         } else {
-            // Fallback to current host (local dev or Go proxy)
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+            // Fallback logic
+            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                // Local development
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+            } else {
+                // Render Production - HARDCODED FALLBACK
+                wsUrl = "wss://nickgame-1.onrender.com/ws";
+            }
         }
 
         console.log("Connecting to WebSocket at:", wsUrl);

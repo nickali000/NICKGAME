@@ -1047,8 +1047,13 @@
                 wsUrl += "/ws";
             }
         } else {
-            const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-            wsUrl = wsProtocol + window.location.host + "/ws";
+            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+                wsUrl = wsProtocol + window.location.host + "/ws";
+            } else {
+                // Render Production - HARDCODED FALLBACK
+                wsUrl = "wss://nickgame-1.onrender.com/ws";
+            }
         }
 
         wsUrl += "?room_id=" + roomId + "&user_id=" + userId;

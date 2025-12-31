@@ -330,11 +330,38 @@ class ParoleCodiceGame(BaseGame):
                              grid_rows=self.GRID_ROWS,
                              grid_cols=self.GRID_COLS)
 
-    def get_json_state(self):
+    def get_json_state(self, user_id=None):
+        # Determine if user can see all colors
+        see_all = False
+        if user_id:
+            room = self.db.get_room(self.room_id)
+            is_admin = (room['admin_id'] == user_id) if room else False
+            is_captain = self._is_captain(user_id)
+            see_all = is_admin or is_captain or self.state == "GAME_OVER"
+        
+        # Filter grid
+        public_grid = []
+        for cell in self.grid:
+            public_cell = {
+                'word': cell['word'],
+                'revealed': cell['revealed']
+            }
+            if see_all or cell['revealed']:
+                public_cell['color'] = cell['color']
+            else:
+                public_cell['color'] = None # Hide color
+            public_grid.append(public_cell)
+
         return {
             "state": self.state,
             "players": self.players,
             "winner": self.winner,
+            "winner_reason": self.winner_reason,
             "current_team": self.current_team,
-            "scores": self.scores
+            "scores": self.scores,
+            "teams": self.teams,
+            "captains": self.captains,
+            "current_clue": self.current_clue,
+            "guesses_remaining": self.guesses_remaining,
+            "grid": public_grid
         }

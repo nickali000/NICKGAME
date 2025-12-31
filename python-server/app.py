@@ -324,8 +324,7 @@ def reset_game():
     
     # 1. Delete game state from DB
     db.delete_secret_hitler_state(room_id)
-    # Clear generic game_data
-    db.update_game_data(room_id, {})
+    db.update_game_data(room_id, {})  # Clear generic game data
     
     # 2. Set room state to LOBBY
     db.set_room_state(room_id, "LOBBY")
@@ -338,34 +337,20 @@ def reset_game():
 
 @app.route('/api/game/<room_id>/status', methods=['GET'])
 def get_game_status(room_id):
-    # Check if game is active in memory
+    user_id = request.args.get('user_id')
     game = get_or_restore_game(room_id)
-    
-    if game:
-        # If game is active (Spia, SecretHitler, etc.)
-        state = getattr(game, 'state', 'PLAYING')
-        winner = getattr(game, 'winner', None)
-        current_team = getattr(game, 'current_team', None)
-        
-        response = {
-            "status": "active",
-            "state": state,
-            "winner": winner,
-            "current_team": current_team
-        }
-        }
-        print(f"DEBUG /api/game/{room_id}/status: Returning {response}")
-        return jsonify(response)
-    else:
-        # If no game active, check DB room state
+    if not game:
+        # If no game is active, check if room exists and is in LOBBY
         room = db.get_room(room_id)
-        if room:
-            return jsonify({
-                "status": "room_found",
-                "state": room['state'] # Likely 'LOBBY'
-            })
-        else:
-            return jsonify({"status": "error", "message": "Room not found"}), 404
+        if room and room['state'] == 'LOBBY':
+             return jsonify({"status": "lobby", "state": "LOBBY"})
+        return jsonify({"status": "error", "message": "Game not found"}), 404
+    
+    try:
+        return jsonify(game.get_json_state(user_id))
+    except TypeError:
+        return jsonify(game.get_json_state())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False)
+

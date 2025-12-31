@@ -116,7 +116,8 @@ class DBManager:
                 ('secret_hitler', 'Secret Hitler', 5, 10, 'A social deduction game', True),
                 ('dodgeball', 'Dodgeball', 4, 8, 'A fast-paced action game', True),
                 ('spia', 'Spia', 3, 10, 'Find the spy!', True),
-                ('parola_segreta', 'Parola Segreta', 3, 10, 'Find the impostor with a different word', True)
+                ('parola_segreta', 'Parola Segreta', 3, 10, 'Find the impostor with a different word', True),
+                ('parolecodice', 'Parolecodice', 4, 10, 'Codenames style team game', True)
             ]
             
             for g in games_to_insert:
@@ -163,6 +164,47 @@ class DBManager:
                 self.conn.commit()
                 print("Inserted default secret words")
 
+            # Create codenames_words table for Parolecodice
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS codenames_words (
+                    id SERIAL PRIMARY KEY,
+                    word TEXT NOT NULL UNIQUE
+                );
+            """)
+            self.conn.commit()
+
+            # Seed codenames_words if empty
+            cur.execute("SELECT COUNT(*) as count FROM codenames_words")
+            if cur.fetchone()['count'] == 0:
+                italian_words = [
+                    'Africa', 'Aereo', 'Albero', 'Amore', 'Angelo', 'Anello', 'Arco', 'Arte',
+                    'Banca', 'Barca', 'Bosco', 'Bottone', 'Braccio', 'Buio', 'Burro',
+                    'Caccia', 'Caldo', 'Camera', 'Campo', 'Cane', 'Cantante', 'Capitale', 'Cappello',
+                    'Carta', 'Casa', 'Castello', 'Cavallo', 'Centro', 'Cervello', 'Chiave', 'Chiesa',
+                    'Cinema', 'Circo', 'Citta', 'Classe', 'Colore', 'Corsa', 'Cucina',
+                    'Dente', 'Deserto', 'Diamante', 'Dio', 'Disco', 'Dollaro', 'Donna', 'Drago',
+                    'Elefante', 'Erba', 'Europa', 'Famiglia', 'Fantasma', 'Farfalla', 'Ferro', 'Festa',
+                    'Fiamma', 'Fiore', 'Fiume', 'Foglia', 'Foresta', 'Formaggio', 'Formica', 'Foto',
+                    'Freccia', 'Freddo', 'Frutta', 'Fuoco', 'Futuro', 'Gatto', 'Gelato', 'Ghiaccio',
+                    'Giardino', 'Gioco', 'Giornale', 'Governo', 'Guerra', 'Gufo', 'Hamburger',
+                    'Hotel', 'Isola', 'Italia', 'Latte', 'Legno', 'Leone', 'Libro', 'Luce', 'Luna',
+                    'Macchina', 'Mago', 'Mano', 'Mare', 'Mela', 'Mercato', 'Miele', 'Moda', 'Mondo',
+                    'Montagna', 'Morte', 'Muro', 'Musica', 'Nave', 'Neve', 'Notte', 'Nuvola',
+                    'Occhio', 'Oceano', 'Olio', 'Ombra', 'Ora', 'Oro', 'Orso', 'Ospedale',
+                    'Palazzo', 'Palla', 'Pane', 'Parola', 'Passato', 'Pesce', 'Piano', 'Piede',
+                    'Pietra', 'Pioggia', 'Pirata', 'Pizza', 'Ponte', 'Porta', 'Presidente', 'Prigione',
+                    'Principessa', 'Radio', 'Regina', 'Rete', 'Ricordo', 'Rischio', 'Robot', 'Roma',
+                    'Rosa', 'Ruota', 'Sale', 'Sangue', 'Scala', 'Scuola', 'Segreto', 'Serpente',
+                    'Silenzio', 'Sole', 'Spada', 'Specchio', 'Spiaggia', 'Spirito', 'Stadio', 'Stella',
+                    'Storia', 'Strada', 'Tavolo', 'Teatro', 'Telefono', 'Tempo', 'Terra', 'Testa',
+                    'Torre', 'Treno', 'Triangolo', 'Uccello', 'Uomo', 'Uovo', 'Vento', 'Verde',
+                    'Vestito', 'Via', 'Viaggio', 'Vino', 'Vita', 'Vulcano', 'Zero', 'Zoo'
+                ]
+                for w in italian_words:
+                    cur.execute("INSERT INTO codenames_words (word) VALUES (%s) ON CONFLICT DO NOTHING", (w,))
+                self.conn.commit()
+                print(f"Inserted {len(italian_words)} codenames words")
+
     def create_room(self, room_id, admin_id):
         with self.get_cursor() as cur:
             cur.execute("INSERT INTO rooms (id, admin_id) VALUES (%s, %s)", (room_id, admin_id))
@@ -208,6 +250,11 @@ class DBManager:
             cur.execute("SELECT id, name, min_players, max_players, description FROM games WHERE enabled = true ORDER BY name")
             return cur.fetchall()
     
+    def get_codenames_words(self, count=24):
+        """Get random words for Codenames/Parolecodice game"""
+        with self.get_cursor() as cur:
+            cur.execute("SELECT word FROM codenames_words ORDER BY RANDOM() LIMIT %s", (count,))
+            return [row['word'] for row in cur.fetchall()]
     def delete_room(self, room_id):
         """Delete a room and all associated players"""
         with self.get_cursor() as cur:

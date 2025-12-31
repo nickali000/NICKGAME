@@ -3,6 +3,7 @@ from games.secret_hitler import SecretHitlerGame
 from games.dodgeball import DodgeballGame
 from games.spia import SpiaGame
 from games.parola_segreta import ParolaSegretaGame
+from games.parola_codice import ParoleCodiceGame
 from db_manager import DBManager
 import uuid
 import os
@@ -38,6 +39,10 @@ def get_or_restore_game(room_id):
             game = DodgeballGame(room_id, db)
         elif room['game_type'] == "spia":
             game = SpiaGame(room_id, db)
+        elif room['game_type'] == "parola_segreta":
+            game = ParolaSegretaGame(room_id, db)
+        elif room['game_type'] == "parolecodice":
+            game = ParoleCodiceGame(room_id, db)
         else:
             return None
             
@@ -182,6 +187,8 @@ def set_game():
         active_games[room_id] = SpiaGame(room_id, db)
     elif game_type == "parola_segreta":
         active_games[room_id] = ParolaSegretaGame(room_id, db)
+    elif game_type == "parolecodice":
+        active_games[room_id] = ParoleCodiceGame(room_id, db)
     else:
         return jsonify({"status": "error", "message": "Unknown game type"}), 400
     
@@ -317,6 +324,8 @@ def reset_game():
     
     # 1. Delete game state from DB
     db.delete_secret_hitler_state(room_id)
+    # Clear generic game_data
+    db.update_game_data(room_id, {})
     
     # 2. Set room state to LOBBY
     db.set_room_state(room_id, "LOBBY")
@@ -336,11 +345,14 @@ def get_game_status(room_id):
         # If game is active (Spia, SecretHitler, etc.)
         state = getattr(game, 'state', 'PLAYING')
         winner = getattr(game, 'winner', None)
+        current_team = getattr(game, 'current_team', None)
         
         response = {
             "status": "active",
             "state": state,
-            "winner": winner
+            "winner": winner,
+            "current_team": current_team
+        }
         }
         print(f"DEBUG /api/game/{room_id}/status: Returning {response}")
         return jsonify(response)

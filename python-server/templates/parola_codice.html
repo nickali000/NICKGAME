@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parolecodice - Modular Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .word-card {
+            aspect-ratio: 2/1;
+            transition: all 0.2s;
+        }
+
+        .word-card.red {
+            background: rgba(239, 68, 68, 0.8);
+        }
+
+        .word-card.blue {
+            background: rgba(59, 130, 246, 0.8);
+        }
+
+        .word-card.neutral {
+            background: rgba(156, 163, 175, 0.5);
+        }
+
+        .word-card.black {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .word-card.hidden {
+            background: rgba(100, 116, 139, 0.3);
+        }
+
+        .word-card.voted {
+            ring: 3px;
+            ring-color: yellow;
+            transform: scale(1.05);
+        }
+
+        .team-red {
+            border-color: #ef4444;
+        }
+
+        .team-blue {
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen p-4">
+
+    <div class="max-w-2xl mx-auto space-y-4">
+
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-blue-500">
+                🅿️ Parolecodice
+            </h1>
+            <div class="flex justify-center gap-4 text-sm">
+                <span class="text-red-400 font-bold">🔴 Rossi: {{ game.scores.red }}/{{ game.COLOR_DISTRIBUTION.red
+                    }}</span>
+                <span class="text-blue-400 font-bold">🔵 Blu: {{ game.scores.blue }}/{{ game.COLOR_DISTRIBUTION.blue
+                    }}</span>
+            </div>
+        </div>
+
+        <!-- Team Selection Phase -->
+        {% if game.state == 'TEAM_SELECT' %}
+        <div class="glass-panel rounded-xl p-4 space-y-4">
+            <h2 class="text-lg font-bold text-center">Scegli la tua squadra</h2>
+
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Red Team -->
+                <div class="p-3 rounded-lg border-2 team-red bg-red-500/10">
+                    <h3 class="font-bold text-red-400 text-center mb-2">🔴 Rossi</h3>
+                    <div class="space-y-1 text-sm min-h-[60px]">
+                        {% for p in team_players.red %}
+                        <div class="flex items-center gap-1">
+                            {% if p.is_captain %}👑{% endif %}
+                            {{ p.nickname }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if player_team != 'red' %}
+                    <button onclick="joinTeam('red')"
+                        class="w-full mt-2 py-1 bg-red-600 hover:bg-red-500 rounded text-sm font-bold">
+                        Unisciti
+                    </button>
+                    {% elif not game.captains.red %}
+                    <button onclick="becomeCaptain()"
+                        class="w-full mt-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm font-bold">
+                        👑 Diventa Capitano
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Blue Team -->
+                <div class="p-3 rounded-lg border-2 team-blue bg-blue-500/10">
+                    <h3 class="font-bold text-blue-400 text-center mb-2">🔵 Blu</h3>
+                    <div class="space-y-1 text-sm min-h-[60px]">
+                        {% for p in team_players.blue %}
+                        <div class="flex items-center gap-1">
+                            {% if p.is_captain %}👑{% endif %}
+                            {{ p.nickname }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if player_team != 'blue' %}
+                    <button onclick="joinTeam('blue')"
+                        class="w-full mt-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold">
+                        Unisciti
+                    </button>
+                    {% elif not game.captains.blue %}
+                    <button onclick="becomeCaptain()"
+                        class="w-full mt-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm font-bold">
+                        👑 Diventa Capitano
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if is_admin %}
+            <button onclick="startPlaying()"
+                class="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-bold">
+                ▶️ Inizia Partita
+            </button>
+            {% else %}
+            <p class="text-center text-sm text-slate-400">Attendi che l'admin avvii la partita...</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Playing Phase -->
+        {% if game.state == 'PLAYING' %}
+
+        <!-- Current Turn Info -->
+        <div class="glass-panel rounded-lg p-3 text-center">
+            <p class="text-sm">Turno:
+                <span class="font-bold {{ 'text-red-400' if game.current_team == 'red' else 'text-blue-400' }}">
+                    {{ 'Rossi 🔴' if game.current_team == 'red' else 'Blu 🔵' }}
+                </span>
+            </p>
+            {% if game.current_clue %}
+            <p class="text-lg font-bold mt-1">
+                Indizio: "{{ game.current_clue.word }}" - {{ game.current_clue.number }}
+            </p>
+            <p class="text-xs text-slate-400">Tentativi rimasti: {{ game.guesses_remaining }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Captain Clue Input -->
+        {% if is_captain and player_team == game.current_team and not game.current_clue %}
+        <div class="glass-panel rounded-lg p-4 space-y-3 border-2 border-yellow-500/50">
+            <h3 class="font-bold text-yellow-400">👑 Dai un indizio alla tua squadra</h3>
+            <div class="flex gap-2">
+                <input type="text" id="clueWord" placeholder="Parola indizio..."
+                    class="flex-1 p-2 bg-slate-800 border border-slate-700 rounded text-white">
+                <input type="number" id="clueNumber" min="1" max="9" value="1"
+                    class="w-16 p-2 bg-slate-800 border border-slate-700 rounded text-white text-center">
+            </div>
+            <button onclick="giveClue()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 rounded font-bold">
+                Invia Indizio
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- Word Grid -->
+        <div class="grid grid-cols-{{ grid_cols }} gap-1">
+            {% for i in range(game.grid|length) %}
+            {% set cell = game.grid[i] %}
+            <div {% if not is_captain and player_team==game.current_team and game.current_clue and not cell.revealed
+                %}onclick="voteWord({{ i }})" {% endif %} id="word-{{ i }}"
+                class="word-card rounded p-1 text-center flex items-center justify-center cursor-pointer
+                    {{ cell.color if (cell.revealed or is_captain) else 'hidden' }}
+                    {% if not cell.revealed and not is_captain and player_team == game.current_team and game.current_clue %}hover:ring-2 hover:ring-white{% endif %}">
+                <span class="text-xs font-bold leading-tight">{{ cell.word }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- End Turn Button -->
+        {% if player_team == game.current_team and game.current_clue and not is_captain %}
+        <button onclick="endTurn()" class="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded font-bold">
+            ⏭️ Passa Turno
+        </button>
+        {% endif %}
+
+        {% endif %}
+
+        <!-- Game Over -->
+        {% if game.winner %}
+        <div class="glass-panel rounded-xl p-6 text-center space-y-4 border-2 border-green-500/50">
+            <h2 class="text-2xl font-bold">🏆 Partita Terminata!</h2>
+            <p class="text-xl">Vincono:
+                <span class="font-bold {{ 'text-red-400' if game.winner == 'Red' else 'text-blue-400' }}">
+                    {{ game.winner }}
+                </span>
+            </p>
+            <p class="text-slate-300">{{ game.winner_reason }}</p>
+
+            {% if is_admin %}
+            <button onclick="restartGame()" class="py-2 px-6 bg-green-600 hover:bg-green-500 rounded-lg font-bold">
+                🔄 Nuova Partita
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Back to Lobby -->
+        <div class="text-center pt-2">
+            <a href="/lobby?room_id={{ game.room_id }}&user_id={{ player_id }}"
+                class="text-slate-400 hover:text-white text-sm underline">
+                ← Torna alla Lobby
+            </a>
+        </div>
+
+    </div>
+
+    <script>
+        // Polling for state updates
+        let currentState = "{{ game.state }}";
+        let currentWinner = "{{ game.winner if game.winner else '' }}";
+        let currentTeam = "{{ game.current_team }}";
+
+        setInterval(async () => {
+            try {
+                const res = await fetch(`/api/game/{{ game.room_id }}/status`);
+                const data = await res.json();
+
+                // Normalize values for comparison
+                const apiState = data.state || '';
+                const apiWinner = data.winner || '';
+                const apiTeam = data.current_team || '';
+
+                if (apiState !== currentState || 
+                    apiWinner !== currentWinner ||
+                    apiTeam !== currentTeam) {
+                    console.log("State changed, reloading...");
+                    console.log(`State: '${currentState}' vs '${apiState}'`);
+                    console.log(`Winner: '${currentWinner}' vs '${apiWinner}'`);
+                    console.log(`Team: '${currentTeam}' vs '${apiTeam}'`);
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error("Polling error:", e);
+            }
+        }, 2000);
+
+        let selectedWord = null;
+
+        async function joinTeam(team) {
+            await sendAction('join_team', { team });
+            window.location.reload();
+        }
+
+        async function becomeCaptain() {
+            await sendAction('become_captain', {});
+            window.location.reload();
+        }
+
+        async function startPlaying() {
+            const res = await sendAction('start_playing', {});
+            if (res.status === 'error') {
+                alert(res.message);
+            } else {
+                window.location.reload();
+            }
+        }
+
+        async function giveClue() {
+            const word = document.getElementById('clueWord').value.trim();
+            const number = parseInt(document.getElementById('clueNumber').value) || 1;
+
+            if (!word) {
+                alert("Inserisci una parola!");
+                return;
+            }
+
+            await sendAction('give_clue', { word, number });
+            window.location.reload();
+        }
+
+        function voteWord(index) {
+            // Deselect previous
+            document.querySelectorAll('.word-card').forEach(c => c.classList.remove('ring-4', 'ring-yellow-400'));
+
+            // Select new
+            const card = document.getElementById(`word-${index}`);
+            card.classList.add('ring-4', 'ring-yellow-400');
+            selectedWord = index;
+
+            // Auto-submit vote
+            sendAction('vote_word', { word_index: index }).then(() => {
+                window.location.reload();
+            });
+        }
+
+        async function endTurn() {
+            await sendAction('end_turn', {});
+            window.location.reload();
+        }
+
+        async function restartGame() {
+            await sendAction('restart_game', {});
+            window.location.reload();
+        }
+
+        async function endGame() {
+            if (!confirm("Sei sicuro di voler terminare la partita per tutti e tornare alla lobby?")) return;
+
+            try {
+                const res = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_id: "{{ game.room_id }}" })
+                });
+                const result = await res.json();
+                if (result.status === 'reset') {
+                    window.location.href = "/lobby?room_id={{ game.room_id }}&user_id={{ player_id }}";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Errore durante la terminazione della partita");
+            }
+        }
+
+        async function sendAction(type, data) {
+            try {
+                const res = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room_id: "{{ game.room_id }}",
+                        user_id: "{{ player_id }}",
+                        action: { type, ...data }
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                console.error(e);
+                return { status: 'error' };
+            }
+        }
+    </script>
+
+</body>
+
+</html>

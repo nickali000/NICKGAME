@@ -111,16 +111,57 @@ class DBManager:
             """)
             self.conn.commit()
             
-            # Insert default games if table is empty
-            cur.execute("SELECT COUNT(*) as count FROM games")
+            # Insert default games (Upsert)
+            games_to_insert = [
+                ('secret_hitler', 'Secret Hitler', 5, 10, 'A social deduction game', True),
+                ('dodgeball', 'Dodgeball', 4, 8, 'A fast-paced action game', True),
+                ('spia', 'Spia', 3, 10, 'Find the spy!', True),
+                ('parola_segreta', 'Parola Segreta', 3, 10, 'Find the impostor with a different word', True)
+            ]
+            
+            for g in games_to_insert:
+                cur.execute("""
+                    INSERT INTO games (id, name, min_players, max_players, description, enabled)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        min_players = EXCLUDED.min_players,
+                        max_players = EXCLUDED.max_players,
+                        description = EXCLUDED.description,
+                        enabled = EXCLUDED.enabled
+                """, g)
+            
+            self.conn.commit()
+            print("Upserted default games")
+
+            # Create parola_segreta table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS parola_segreta (
+                    id SERIAL PRIMARY KEY,
+                    parola_impostore TEXT NOT NULL,
+                    parola_giocatori TEXT NOT NULL
+                );
+            """)
+            self.conn.commit()
+
+            # Seed parola_segreta if empty
+            cur.execute("SELECT COUNT(*) as count FROM parola_segreta")
             if cur.fetchone()['count'] == 0:
                 cur.execute("""
-                    INSERT INTO games (id, name, min_players, max_players, description, enabled) VALUES
-                    ('secret_hitler', 'Secret Hitler', 5, 10, 'A social deduction game', true),
-                    ('dodgeball', 'Dodgeball', 4, 8, 'A fast-paced action game', true)
+                    INSERT INTO parola_segreta (parola_impostore, parola_giocatori) VALUES
+                    ('Peter Pan', 'Pirata'),
+                    ('Superman', 'Batman'),
+                    ('Pizza', 'Pasta'),
+                    ('Cane', 'Gatto'),
+                    ('Sole', 'Luna'),
+                    ('Mare', 'Montagna'),
+                    ('Calcio', 'Basket'),
+                    ('Mela', 'Pera'),
+                    ('Vino', 'Birra'),
+                    ('Estate', 'Inverno')
                 """)
                 self.conn.commit()
-                print("Inserted default games")
+                print("Inserted default secret words")
 
     def create_room(self, room_id, admin_id):
         with self.get_cursor() as cur:
@@ -370,3 +411,9 @@ class DBManager:
             cur.execute("SELECT global_score FROM users WHERE id = %s", (user_id,))
             res = cur.fetchone()
             return res['global_score'] if res else 0
+
+    def get_random_word_pair(self):
+        """Get a random word pair for Parola Segreta game"""
+        with self.get_cursor() as cur:
+            cur.execute("SELECT * FROM parola_segreta ORDER BY RANDOM() LIMIT 1")
+            return cur.fetchone()

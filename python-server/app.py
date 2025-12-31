@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, redirect
 from games.secret_hitler import SecretHitlerGame
 from games.dodgeball import DodgeballGame
 from games.spia import SpiaGame
+from games.parola_segreta import ParolaSegretaGame
 from db_manager import DBManager
 import uuid
 import os
@@ -173,6 +174,8 @@ def set_game():
         active_games[room_id] = DodgeballGame(room_id, db)
     elif game_type == "spia":
         active_games[room_id] = SpiaGame(room_id, db)
+    elif game_type == "parola_segreta":
+        active_games[room_id] = ParolaSegretaGame(room_id, db)
     else:
         return jsonify({"status": "error", "message": "Unknown game type"}), 400
     
@@ -199,12 +202,19 @@ def start_game():
         if room and room['game_type']:
              if room['game_type'] == "secret_hitler":
                 active_games[room_id] = SecretHitlerGame(room_id, db)
-                # Need to load players into game object
+             elif room['game_type'] == "dodgeball":
+                active_games[room_id] = DodgeballGame(room_id, db)
+             elif room['game_type'] == "spia":
+                active_games[room_id] = SpiaGame(room_id, db)
+             elif room['game_type'] == "parola_segreta":
+                active_games[room_id] = ParolaSegretaGame(room_id, db)
+            
+             # Need to load players into game object
+             if room_id in active_games:
                 players = db.get_players(room_id)
                 for p in players:
                     active_games[room_id].add_player(p['id'], p['nickname'])
-                print(f"Restored game from DB with {len(players)} players")
-             # ... other games
+                print(f"Restored game {room['game_type']} from DB with {len(players)} players")
         else:
             print(f"No game type set for room {room_id}")
             return jsonify({"status": "error", "message": "No game selected. Please select a game first."}), 400
@@ -320,11 +330,14 @@ def get_game_status(room_id):
         # If game is active (Spia, SecretHitler, etc.)
         state = getattr(game, 'state', 'PLAYING')
         winner = getattr(game, 'winner', None)
-        return jsonify({
+        
+        response = {
             "status": "active",
             "state": state,
             "winner": winner
-        })
+        }
+        print(f"DEBUG /api/game/{room_id}/status: Returning {response}")
+        return jsonify(response)
     else:
         # If no game active, check DB room state
         room = db.get_room(room_id)

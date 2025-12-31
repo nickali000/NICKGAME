@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spia - Modular Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen p-4">
+
+    <div class="max-w-md mx-auto space-y-6">
+
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500">
+                🕵️ Spia
+            </h1>
+            {% if special_event == 'double_points' %}
+            <div
+                class="inline-block px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-sm font-semibold border border-yellow-500/50 animate-pulse">
+                💰 Punti Doppi!
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Role Card -->
+        <div class="glass-panel rounded-xl p-6 text-center space-y-4 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent">
+            </div>
+
+            {% if is_spy %}
+            <div class="text-red-500 text-6xl mb-2">🕵️‍♀️</div>
+            <h2 class="text-2xl font-bold text-red-400">SEI LA SPIA!</h2>
+            <p class="text-slate-300">Il tuo obiettivo è scoprire il luogo segreto senza farti scoprire.</p>
+            {% else %}
+            <div class="text-blue-400 text-6xl mb-2">📍</div>
+            <h2 class="text-xl font-bold text-blue-300">SEI UN INNOCENTE</h2>
+            <div class="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                <p class="text-sm text-slate-400 uppercase tracking-wider">Luogo</p>
+                <p class="text-2xl font-bold text-white">{{ location }}</p>
+            </div>
+            <div class="mt-2 p-2 bg-slate-800/30 rounded-lg">
+                <p class="text-xs text-slate-400 uppercase">Il tuo Ruolo</p>
+                <p class="text-lg text-slate-200">{{ role }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Game Status / Winner -->
+        <!-- Game Status / Winner -->
+        {% if game.winner %}
+        <div class="glass-panel rounded-xl p-6 text-center border-green-500/30 bg-green-500/10 space-y-6">
+            <div>
+                <h3 class="text-2xl font-bold text-white mb-2">Partita Terminata</h3>
+                <p class="text-lg mb-1">Vincitore: <span class="font-bold text-green-400">{{ game.winner }}</span></p>
+                <p class="text-sm text-slate-300 italic">{{ game.winner_reason }}</p>
+            </div>
+
+            <!-- Round Results -->
+            <div class="bg-slate-800/50 rounded-lg p-4">
+                <h4 class="text-md font-bold text-slate-200 mb-3 border-b border-slate-700 pb-2">Risultati Round</h4>
+                <div class="space-y-2 text-sm">
+                    {% for res in last_round_results %}
+                    <div class="flex justify-between items-center">
+                        <div class="text-left">
+                            <span class="font-bold {{ 'text-red-400' if res.role == 'Spia' else 'text-blue-400' }}">{{
+                                res.nickname }}</span>
+                            <span class="text-xs text-slate-500 ml-1">({{ res.role }})</span>
+                        </div>
+                        <div class="text-right">
+                            <span
+                                class="font-mono font-bold {{ 'text-green-400' if res.points > 0 else 'text-red-400' if res.points < 0 else 'text-slate-400' }}">
+                                {{ '+' if res.points > 0 }}{{ res.points }}
+                            </span>
+                            <div class="text-[10px] text-slate-400">{{ res.reasons }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="bg-slate-800/50 rounded-lg p-4">
+                <h4 class="text-md font-bold text-slate-200 mb-3 border-b border-slate-700 pb-2">🏆 Classifica Generale
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                        <span>Giocatore</span>
+                        <div class="flex gap-4">
+                            <span>Partita</span>
+                            <span>Totale</span>
+                        </div>
+                    </div>
+                    {% for p in leaderboard %}
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-slate-300">{{ loop.index }}. {{ p.nickname }}</span>
+                        <div class="flex gap-4">
+                            <span class="font-mono font-bold text-yellow-400 w-12 text-right">{{ p.score }} pt</span>
+                            <span class="font-mono font-bold text-blue-400 w-12 text-right">{{ p.global_score }}
+                                pt</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if is_admin %}
+            <button onclick="restartGame()"
+                class="mt-4 px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors w-full shadow-lg shadow-green-900/20">
+                Nuova Partita (Rigioca Subito)
+            </button>
+            {% else %}
+            <p class="text-xs text-slate-500 mt-4">Attendi che l'admin avvii una nuova partita</p>
+            {% endif %}
+        </div>
+        {% else %}
+
+        <!-- Actions -->
+        <div class="space-y-4">
+
+            <!-- Admin Start Voting Button (Visible to Admin in PLAYING phase) -->
+            {% if is_admin and game.state == 'PLAYING' %}
+            <div class="glass-panel rounded-xl p-4 border-yellow-500/20 text-center mb-4">
+                <p class="text-sm text-slate-300 mb-3">Quando il tempo è scaduto, avvia le votazioni.</p>
+                <button onclick="startVoting()"
+                    class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-6 rounded-full transition-all">
+                    Avvia Votazioni
+                </button>
+            </div>
+            {% elif game.state == 'PLAYING' %}
+            <div class="text-center p-4">
+                <p class="text-slate-500 text-sm animate-pulse">In attesa delle votazioni...</p>
+            </div>
+            {% endif %}
+
+            <!-- Voting Section (Only visible in VOTING phase for Innocents) -->
+            {% if not is_spy and game.state == 'VOTING' %}
+            {% if not has_voted %}
+            <div class="glass-panel rounded-xl p-4 border-red-500/20">
+                <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                    <span class="text-xl">🗳️</span> Vota i Sospetti
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Seleziona una o più persone che ritieni siano la Spia.</p>
+
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    {% for p in game.players %}
+                    {% if p.id != player_id %}
+                    <div onclick="toggleVote('{{ p.id }}')" id="vote-card-{{ p.id }}"
+                        class="vote-card cursor-pointer bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-red-500/50 transition-all text-center">
+                        <div class="font-bold text-slate-200">{{ p.nickname }}</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <button onclick="submitVote()"
+                    class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-3 rounded-lg shadow-lg shadow-red-900/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                    Conferma Votazione
+                </button>
+            </div>
+            {% else %}
+            <div class="glass-panel rounded-xl p-6 text-center border-green-500/20">
+                <div class="text-green-400 text-4xl mb-2">✅</div>
+                <h3 class="text-lg font-bold text-white mb-2">Voto Confermato</h3>
+                <p class="text-sm text-slate-300">Attendi che gli altri giocatori finiscano di votare.</p>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <!-- Spy Guess Section (Only visible in VOTING phase) -->
+            {% if is_spy and game.state == 'VOTING' %}
+            {% if not spy_has_acted %}
+            <div class="glass-panel rounded-xl p-4 border-red-500/20">
+                <h3 class="font-bold text-red-300 mb-3 flex items-center gap-2">
+                    🎯 Indovina Luogo
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Scegli un luogo per vincere punti extra (+2), oppure passa per
+                    rimanere nascosto.</p>
+
+                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar mb-3">
+                    {% for loc in all_locations %}
+                    <button
+                        onclick="if(confirm('Sei sicuro di voler indovinare {{ loc }}?')) sendAction('guess_location', {location: '{{ loc }}'})"
+                        class="p-2 bg-slate-800 hover:bg-blue-900/50 border border-slate-700 hover:border-blue-500/50 rounded-lg transition-all text-xs">
+                        {{ loc }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <button onclick="if(confirm('Sicuro di non voler indovinare?')) sendAction('spy_pass', {})"
+                    class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-bold transition-colors">
+                    Passa (Non Indovinare)
+                </button>
+            </div>
+            {% else %}
+            <div class="glass-panel rounded-xl p-6 text-center border-blue-500/20">
+                <div class="text-blue-400 text-4xl mb-2">⏳</div>
+                <h3 class="text-lg font-bold text-white mb-2">Azione Registrata</h3>
+                <p class="text-sm text-slate-300">Attendi che tutti gli altri giocatori abbiano votato.</p>
+            </div>
+            {% endif %}
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+        <!-- Admin Controls -->
+        <div class="text-center pt-4">
+            {% if is_admin %}
+            <button onclick="endGame()"
+                class="text-red-400 hover:text-red-300 text-sm font-bold underline decoration-red-500/50 hover:decoration-red-300 transition-all">
+                Termina Partita e Torna alla Lobby
+            </button>
+            {% else %}
+            <p class="text-slate-500 text-xs">Attendi che l'admin termini la partita</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <script>
+        async function sendAction(type, data) {
+            const payload = {
+                room_id: "{{ game.room_id }}",
+                user_id: "{{ player_id }}",
+                action: { type: type, ...data }
+            };
+
+            try {
+                const res = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result.status === 'game_over') {
+                    location.reload();
+                } else if (result.status === 'ok' || result.status === 'vote_registered') {
+                    alert('Azione registrata!');
+                } else {
+                    console.log("Action result:", result);
+                }
+            } catch (e) {
+                console.error("Error sending action:", e);
+                alert("Errore di comunicazione con il server");
+            }
+        }
+
+        // Current state from server template
+        let currentState = "{{ game.state }}";
+        let currentWinner = "{{ game.winner if game.winner else '' }}";
+
+        // Auto-refresh for game state changes
+        setInterval(async () => {
+            try {
+                const res = await fetch(`/api/game/{{ game.room_id }}/status`);
+                const data = await res.json();
+
+                if (data.state === 'LOBBY') {
+                    // Game reset, go to lobby
+                    window.location.href = "/lobby?room_id={{ game.room_id }}&user_id={{ player_id }}";
+                    return;
+                }
+
+                // Check for state change (e.g. PLAYING -> VOTING)
+                if (data.state !== currentState) {
+                    console.log(`State changed from ${currentState} to ${data.state}. Reloading...`);
+                    window.location.reload();
+                    return;
+                }
+
+                // Check for winner (Game Over)
+                const newWinner = data.winner || '';
+                if (newWinner !== currentWinner) {
+                    console.log("Winner declared. Reloading...");
+                    window.location.reload();
+                    return;
+                }
+
+            } catch (e) {
+                console.error("Polling error:", e);
+            }
+        }, 2000); // Check every 2 seconds
+
+        let selectedVotes = [];
+
+        function toggleVote(targetId) {
+            const card = document.getElementById(`vote-card-${targetId}`);
+            if (selectedVotes.includes(targetId)) {
+                selectedVotes = selectedVotes.filter(id => id !== targetId);
+                card.classList.remove('bg-red-500/20', 'border-red-500');
+                card.classList.add('bg-slate-800/50', 'border-slate-700');
+            } else {
+                selectedVotes.push(targetId);
+                card.classList.remove('bg-slate-800/50', 'border-slate-700');
+                card.classList.add('bg-red-500/20', 'border-red-500');
+            }
+        }
+
+        async function submitVote() {
+            if (selectedVotes.length === 0) {
+                alert("Seleziona almeno un sospetto!");
+                return;
+            }
+            if (!confirm("Confermi la tua votazione? Non potrai cambiarla.")) return;
+
+            try {
+                await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room_id: "{{ game.room_id }}",
+                        user_id: "{{ player_id }}",
+                        action: { type: 'vote', target_ids: selectedVotes }
+                    })
+                });
+                // Reload to show waiting state or result
+                window.location.reload();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function startVoting() {
+            try {
+                await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room_id: "{{ game.room_id }}",
+                        user_id: "{{ player_id }}",
+                        action: { type: 'start_voting' }
+                    })
+                });
+                window.location.reload();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function endGame() {
+            if (!confirm("Sei sicuro di voler terminare la partita per tutti e tornare alla lobby?")) return;
+
+            try {
+                const res = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_id: "{{ game.room_id }}" })
+                });
+                const result = await res.json();
+                if (result.status === 'reset') {
+                    window.location.href = "/lobby?room_id={{ game.room_id }}&user_id={{ player_id }}";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Errore durante la terminazione della partita");
+            }
+        }
+
+        async function restartGame() {
+            if (!confirm("Vuoi iniziare subito una nuova partita con gli stessi giocatori?")) return;
+
+            try {
+                await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room_id: "{{ game.room_id }}",
+                        user_id: "{{ player_id }}",
+                        action: { type: 'restart_game' }
+                    })
+                });
+                // The polling will detect state change (or just reload manually to be sure)
+                setTimeout(() => window.location.reload(), 500);
+            } catch (e) {
+                console.error(e);
+                alert("Errore durante il riavvio della partita");
+            }
+        }
+    </script>
+</body>
+
+</html>

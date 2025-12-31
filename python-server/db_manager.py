@@ -86,6 +86,28 @@ class DBManager:
                     PRIMARY KEY (id, room_id),
                     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS player_roles (
+                    room_id VARCHAR(50) NOT NULL,
+                    player_id VARCHAR(50) NOT NULL,
+                    role VARCHAR(50),
+                    PRIMARY KEY (room_id, player_id),
+                    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS game_votes (
+                    room_id VARCHAR(50) NOT NULL,
+                    voter_id VARCHAR(50) NOT NULL,
+                    target_id VARCHAR(50) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (room_id, voter_id, target_id),
+                    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS game_scores (
+                    room_id VARCHAR(50) NOT NULL,
+                    player_id VARCHAR(50) NOT NULL,
+                    score INTEGER DEFAULT 0,
+                    PRIMARY KEY (room_id, player_id),
+                    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+                );
             """)
             self.conn.commit()
             
@@ -282,3 +304,69 @@ class DBManager:
         with self.get_cursor() as cur:
             cur.execute("DELETE FROM secret_hitler_states WHERE room_id = %s", (room_id,))
             self.conn.commit()
+
+    def cast_vote(self, room_id, voter_id, target_id):
+        """Cast a vote (can be called multiple times for multiple targets)"""
+        with self.get_cursor() as cur:
+            cur.execute("""
+                INSERT INTO game_votes (room_id, voter_id, target_id)
+                VALUES (%s, %s, %s)
+                ON CONFLICT DO NOTHING
+            """, (room_id, voter_id, target_id))
+            self.conn.commit()
+
+    def get_votes(self, room_id):
+        """Get all votes for a room"""
+        with self.get_cursor() as cur:
+            cur.execute("SELECT * FROM game_votes WHERE room_id = %s", (room_id,))
+            return cur.fetchall()
+
+    def clear_votes(self, room_id):
+        """Clear all votes for a room"""
+        with self.get_cursor() as cur:
+            cur.execute("DELETE FROM game_votes WHERE room_id = %s", (room_id,))
+            self.conn.commit()
+
+    def update_score(self, room_id, player_id, points):
+        with self.get_cursor() as cur:
+            cur.execute("""
+                INSERT INTO game_scores (room_id, player_id, score)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (room_id, player_id)
+                DO UPDATE SET score = game_scores.score + EXCLUDED.score
+            """, (room_id, player_id, points))
+            self.conn.commit()
+
+    def get_scores(self, room_id):
+        with self.get_cursor() as cur:
+            cur.execute("SELECT player_id, score FROM game_scores WHERE room_id = %s ORDER BY score DESC", (room_id,))
+            return cur.fetchall()
+
+    def reset_scores(self, room_id):
+        with self.get_cursor() as cur:
+            cur.execute("DELETE FROM game_scores WHERE room_id = %s", (room_id,))
+            self.conn.commit()
+
+    def update_global_score(self, user_id, points):
+        """Update the global score for a user"""
+        with self.get_cursor() as cur:
+            # Create users table if not exists (lazy init)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id VARCHAR(50) PRIMARY KEY,
+                    global_score INTEGER DEFAULT 0
+                )
+            """)
+            cur.execute("""
+                INSERT INTO users (id, global_score)
+                VALUES (%s, %s)
+                ON CONFLICT (id)
+                DO UPDATE SET global_score = users.global_score + EXCLUDED.global_score
+            """, (user_id, points))
+            self.conn.commit()
+
+    def get_global_score(self, user_id):
+        with self.get_cursor() as cur:
+            cur.execute("SELECT global_score FROM users WHERE id = %s", (user_id,))
+            res = cur.fetchone()
+            return res['global_score'] if res else 0

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect
 from games.secret_hitler import SecretHitlerGame
 from games.dodgeball import DodgeballGame
+from games.spia import SpiaGame
 from db_manager import DBManager
 import uuid
 import os
@@ -13,12 +14,8 @@ db = DBManager()
 # Debug: Print GO_SERVER_URL
 print(f"DEBUG: GO_SERVER_URL is set to: {os.getenv('GO_SERVER_URL')}")
 
-# In-memory storage for active game instances (state is transient for now, or could be in DB)
-# We still need this for the game logic objects
-active_games = {} 
-
-def generate_room_id():
-    return str(uuid.uuid4())[:6].upper() 
+# In-memory storage for active game instances
+active_games = {}
 
 def get_or_restore_game(room_id):
     if room_id in active_games:
@@ -32,6 +29,8 @@ def get_or_restore_game(room_id):
             game = SecretHitlerGame(room_id, db)
         elif room['game_type'] == "dodgeball":
             game = DodgeballGame(room_id, db)
+        elif room['game_type'] == "spia":
+            game = SpiaGame(room_id, db)
         else:
             return None
             
@@ -43,6 +42,12 @@ def get_or_restore_game(room_id):
         active_games[room_id] = game
         return game
     return None
+
+# ... (omitted)
+
+
+
+
 
 @app.route('/')
 def index():
@@ -166,6 +171,8 @@ def set_game():
         active_games[room_id] = SecretHitlerGame(room_id, db)
     elif game_type == "dodgeball":
         active_games[room_id] = DodgeballGame(room_id, db)
+    elif game_type == "spia":
+        active_games[room_id] = SpiaGame(room_id, db)
     else:
         return jsonify({"status": "error", "message": "Unknown game type"}), 400
     
@@ -303,6 +310,31 @@ def reset_game():
         del active_games[room_id]
         
     return jsonify({"status": "reset"})
+
+@app.route('/api/game/<room_id>/status', methods=['GET'])
+def get_game_status(room_id):
+    # Check if game is active in memory
+    game = get_or_restore_game(room_id)
+    
+    if game:
+        # If game is active (Spia, SecretHitler, etc.)
+        state = getattr(game, 'state', 'PLAYING')
+        winner = getattr(game, 'winner', None)
+        return jsonify({
+            "status": "active",
+            "state": state,
+            "winner": winner
+        })
+    else:
+        # If no game active, check DB room state
+        room = db.get_room(room_id)
+        if room:
+            return jsonify({
+                "status": "room_found",
+                "state": room['state'] # Likely 'LOBBY'
+            })
+        else:
+            return jsonify({"status": "error", "message": "Room not found"}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False)

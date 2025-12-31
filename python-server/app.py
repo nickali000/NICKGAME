@@ -18,6 +18,12 @@ print(f"DEBUG: GO_SERVER_URL is set to: {os.getenv('GO_SERVER_URL')}")
 # In-memory storage for active game instances
 active_games = {}
 
+def generate_room_id():
+    """Generate a unique 6-character room ID"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
 def get_or_restore_game(room_id):
     if room_id in active_games:
         return active_games[room_id]

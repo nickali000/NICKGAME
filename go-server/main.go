@@ -4,6 +4,8 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 )
 
@@ -21,17 +23,25 @@ func main() {
 	hub := newHub()
 	go hub.run()
 
+	pythonServerUrl := getEnv("PYTHON_SERVER_URL", "http://localhost:5001")
+	target, err := url.Parse(pythonServerUrl)
+	if err != nil {
+		log.Fatal("Error parsing Python Server URL:", err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
 
 	// Proxy all other requests to Python server
-	// Proxy removed to ensure strict separation: Python serves HTML, Go serves WS.
-	// http.HandleFunc("/", ...)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		proxy.ServeHTTP(w, r)
+	})
 
 	log.Printf("Server started on %s", *addr)
-	log.Printf("Using Python Server URL: %s", getEnv("PYTHON_SERVER_URL", "http://localhost:5001"))
-	err := http.ListenAndServe(*addr, nil)
+	log.Printf("Using Python Server URL: %s", pythonServerUrl)
+	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

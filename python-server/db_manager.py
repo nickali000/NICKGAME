@@ -24,13 +24,12 @@ class DBManager:
 
     def connect(self):
         try:
-            self.conn = psycopg2.connect(
-                host=DB_HOST,
-                port=DB_PORT,
-                dbname=DB_NAME,
-                user=DB_USER,
-                password=DB_PASS
-            )
+            # Use DSN with URL encoded password to handle special characters safely
+            import urllib.parse
+            encoded_password = urllib.parse.quote_plus(DB_PASS)
+            dsn = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+            
+            self.conn = psycopg2.connect(dsn)
             print("Connected to Supabase DB")
         except Exception as e:
             print(f"Database connection failed: {e}")

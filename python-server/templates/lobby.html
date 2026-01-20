@@ -166,18 +166,6 @@
     <h1>NICKGAME</h1>
     <h2>Room: {{ room_id }}</h2>
 
-    <!-- Debug UI -->
-    <div
-        style="background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; margin-bottom: 10px; font-size: 0.8em; width: 100%; max-width: 500px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <span>WS Status: <span id="ws-status" style="font-weight: bold; color: orange;">Connecting...</span></span>
-            <span id="ws-url" style="color: #888; font-size: 0.8em;"></span>
-        </div>
-        <div id="debug-log"
-            style="height: 60px; overflow-y: auto; background: #000; color: #0f0; padding: 5px; font-family: monospace; border: 1px solid #333;">
-        </div>
-    </div>
-
     <div class="card">
         <div class="card-title">Players</div>
         <ul class="player-list" id="player-list">
@@ -276,31 +264,14 @@
             }
         }
 
-        const statusEl = document.getElementById('ws-status');
-        const logEl = document.getElementById('debug-log');
-        const urlEl = document.getElementById('ws-url');
-
-        function logDebug(msg) {
-            const line = document.createElement('div');
-            line.textContent = `> ${msg}`;
-            logEl.appendChild(line);
-            logEl.scrollTop = logEl.scrollHeight;
-            console.log(msg);
-        }
-
-        urlEl.textContent = wsUrl;
-
         console.log("Connecting to WebSocket at:", wsUrl);
         let socket;
 
         function connectWebSocket() {
-            logDebug(`Connecting to ${wsUrl}...`);
             socket = new WebSocket(wsUrl);
 
             socket.onopen = function () {
-                statusEl.textContent = "CONNECTED";
-                statusEl.style.color = "#2ecc71";
-                logDebug("WS Connected");
+                console.log("WebSocket connected in lobby");
                 // Handshake only - don't join again, user already joined from index page
                 socket.send(JSON.stringify({
                     type: "handshake",
@@ -316,7 +287,7 @@
                     if (!msgStr) return;
                     try {
                         const msg = JSON.parse(msgStr);
-                        logDebug(`RX: ${msg.type}`);
+                        console.log("WebSocket message:", msg);
 
                         if (msg.type === "player_joined") {
                             // Reload player list
@@ -326,32 +297,22 @@
                             document.getElementById('selected-game-display').innerText =
                                 `Selected: ${msg.game_name}`;
                         } else if (msg.type === "game_started") {
-                            logDebug(`Game Started! Redirecting to ${msg.redirect}`);
                             // Redirect to game page
                             if (msg.redirect) {
-                                setTimeout(() => {
-                                    window.location.href = msg.redirect + `?user_id=${userId}`;
-                                }, 500);
+                                window.location.href = msg.redirect + `?user_id=${userId}`;
                             }
                         } else if (msg.type === "error") {
                             alert("Error: " + msg.message);
                         }
                     } catch (e) {
-                        logDebug(`Error parsing: ${e.message}`);
+                        console.error("Error parsing message:", e, msgStr);
                     }
                 });
             };
 
             socket.onclose = function () {
-                statusEl.textContent = "DISCONNECTED";
-                statusEl.style.color = "#e74c3c";
-                logDebug("WS Disconnected. Reconnecting in 3s...");
+                console.log("WebSocket disconnected, reconnecting...");
                 setTimeout(connectWebSocket, 3000);
-            };
-
-            socket.onerror = function (err) {
-                logDebug("WS Error occurred");
-                console.error("WS Error:", err);
             };
         }
 

@@ -10,7 +10,6 @@ services:
     environment:
       - DB_PASS=${DB_PASS}
       - PYTHONUNBUFFERED=1
-      - GO_SERVER_URL=http://localhost:8080
     volumes:
       - ./python-server:/app
     restart: always

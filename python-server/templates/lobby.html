@@ -203,6 +203,35 @@
         </div>
     </div>
 
+    <div class="card" style="margin-top: 10px; text-align: center;">
+        <button class="btn-secondary" onclick="toggleQRCode()" style="width: auto; padding: 10px 20px;">
+            📱 Mostra QR Code per Unirsi
+        </button>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div
+            style="background-color: white; padding: 20px; border-radius: 10px; text-align: center; position: relative; max-width: 90%; max-height: 90%;">
+            <span onclick="toggleQRCode()"
+                style="position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: black;">&times;</span>
+            <img src="/static/qrcode.png" alt="QR Code" style="max-width: 100%; max-height: 80vh;">
+            <p style="color: black; margin-top: 10px; font-weight: bold;">Scansiona per unirti!</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleQRCode() {
+            const modal = document.getElementById('qr-modal');
+            if (modal.style.display === 'none' || modal.style.display === '') {
+                modal.style.display = 'flex';
+            } else {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+
     <div class="logout-container">
         <button class="btn-secondary" onclick="logout()">Logout</button>
     </div>
@@ -222,14 +251,15 @@
                 wsUrl += "/ws";
             }
         } else {
-            // Fallback logic
-            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-                // Local development
+            // Dynamic fallback: If on localhost or an IP address, use current host.
+            // If on the production domain, use the production WS URL.
+            const hostname = window.location.hostname;
+            if (hostname.includes("onrender.com")) {
+                wsUrl = "wss://nickgame-1.onrender.com/ws";
+            } else {
+                // Localhost, LAN IP, or other dev environment
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-            } else {
-                // Render Production - HARDCODED FALLBACK
-                wsUrl = "wss://nickgame-1.onrender.com/ws";
             }
         }
 

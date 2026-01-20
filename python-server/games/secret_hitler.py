@@ -793,6 +793,12 @@ class SecretHitlerGame(BaseGame):
         role = self.roles.get(player_id, "Unknown")
         team_info = self.get_team_info(player_id)
         
+        # Check if admin
+        room = self.db.get_room(self.room_id)
+        is_admin = False
+        if room and room['admin_id'] == player_id:
+            is_admin = True
+        
         # Determine visible data based on phase and role
         visible_policies = []
         if self.phase == GamePhase.LEGISLATIVE_PRESIDENT and player_id == self.president_candidate:
@@ -808,6 +814,7 @@ class SecretHitlerGame(BaseGame):
 
         return render_template('sh_game.html',
                                room_id=self.room_id,
+                               is_admin=is_admin,
                                role=role.value if hasattr(role, 'value') else role,
                                phase=self.phase.value,
                                policies=self.policies,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -15,7 +16,10 @@ func callPythonAPI(endpoint string, data map[string]interface{}) (map[string]int
 		return nil, err
 	}
 
-	resp, err := http.Post(pythonServerURL+endpoint, "application/json", bytes.NewBuffer(jsonData))
+	url := pythonServerURL + endpoint
+	log.Printf("DEBUG: calling Python API: %s with data %s", url, string(jsonData))
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +32,7 @@ func callPythonAPI(endpoint string, data map[string]interface{}) (map[string]int
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
+		log.Printf("ERROR: Failed to unmarshal response from %s. Body: %s", url, string(body))
 		return nil, err
 	}
 

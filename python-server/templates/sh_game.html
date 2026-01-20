@@ -508,6 +508,14 @@
 
 <body>
     <div class="container">
+        {% if is_admin %}
+        <div style="text-align: right; margin-bottom: 10px;">
+            <button onclick="adminResetGame()" class="btn"
+                style="background-color: #95a5a6; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                🏠 Admin Home
+            </button>
+        </div>
+        {% endif %}
         <h1>SECRET HITLER</h1>
         <div class="room-info">Room: {{ room_id }}</div>
 
@@ -1011,27 +1019,46 @@
     </div>
 
     <script>
-        function toggleRole() {
+        function setRoleVisibility(visible) {
             const content = document.getElementById('role-content');
             const icon = document.getElementById('role-toggle-icon');
             const card = document.getElementById('role-card-container');
             const roleText = document.getElementById('role-text');
             const roleClass = card.getAttribute('data-role-class');
 
-            if (content.style.display === 'none') {
+            if (visible) {
                 // Show
                 content.style.display = 'block';
                 icon.textContent = '👁️';
                 card.classList.add(roleClass);
                 roleText.textContent = "{{ role }}"; // Restore original text
+                localStorage.setItem('sh_role_visible', 'true');
             } else {
                 // Hide
                 content.style.display = 'none';
                 icon.textContent = '🙈';
                 card.classList.remove(roleClass);
                 roleText.textContent = "Nascosto"; // Obfuscate text
+                localStorage.setItem('sh_role_visible', 'false');
             }
         }
+
+        function toggleRole() {
+            const content = document.getElementById('role-content');
+            const isCurrentlyVisible = content.style.display !== 'none';
+            setRoleVisibility(!isCurrentlyVisible);
+        }
+
+        // Initialize from localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedVisibility = localStorage.getItem('sh_role_visible');
+            // Default is visible if not set (or if explicitly 'true')
+            if (savedVisibility === 'false') {
+                setRoleVisibility(false);
+            } else {
+                setRoleVisibility(true);
+            }
+        });
     </script>
 
     <script>
@@ -1047,12 +1074,15 @@
                 wsUrl += "/ws";
             }
         } else {
-            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            // Dynamic fallback: If on localhost or an IP address, use current host.
+            // If on the production domain, use the production WS URL.
+            const hostname = window.location.hostname;
+            if (hostname.includes("onrender.com")) {
+                wsUrl = "wss://nickgame-1.onrender.com/ws";
+            } else {
+                // Localhost, LAN IP, or other dev environment
                 const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
                 wsUrl = wsProtocol + window.location.host + "/ws";
-            } else {
-                // Render Production - HARDCODED FALLBACK
-                wsUrl = "wss://nickgame-1.onrender.com/ws";
             }
         }
 
@@ -1162,6 +1192,33 @@
                 container.style.display = "block";
             } else {
                 container.style.display = "none";
+            }
+        }
+
+        async function adminResetGame() {
+            if (!confirm("Sei sicuro? Questo terminerà la partita per tutti e tornerete alla lobby.")) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ room_id: roomId })
+                });
+
+                const data = await response.json();
+                if (data.status === 'reset') {
+                    // Redirect to lobby
+                    window.location.href = `/lobby?room_id=${roomId}&user_id=${userId}`;
+                } else {
+                    alert("Errore nel reset della partita: " + (data.message || "Unknown error"));
+                }
+            } catch (error) {
+                console.error("Error resetting game:", error);
+                alert("Errore di connessione durante il reset.");
             }
         }
     </script>

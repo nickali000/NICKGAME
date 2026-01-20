@@ -112,7 +112,8 @@ def lobby():
                            is_admin=is_admin,
                            admin_id=room['admin_id'],
                            game_type=game_type,
-                           game_name=game_name)
+                           game_name=game_name,
+                           go_server_url=os.getenv('GO_SERVER_URL'))
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():

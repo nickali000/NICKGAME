@@ -179,8 +179,9 @@
                 wsUrl = "wss://nickgame-1.onrender.com/ws";
             } else {
                 // Localhost, LAN IP, or other dev environment
-                const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-                wsUrl = wsProtocol + window.location.host + "/ws";
+                // Assumes Go server is on 8080.
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws`;
             }
         }
 

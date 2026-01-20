@@ -235,7 +235,17 @@ def start_game():
         
     game = active_games[room_id]
     print(f"Game has {len(game.players)} players")
-    success = game.start_game()
+    start_result = game.start_game()
+    
+    # Handle both boolean and tuple return values
+    if isinstance(start_result, tuple):
+        success = start_result[0]
+        msg = start_result[1]
+    else:
+        success = start_result
+        msg = ""
+
+    print(f"Game start result for room {room_id}: success={success}, msg={msg}")
     
     if success:
         print(f"Game started successfully for room {room_id}")
@@ -243,8 +253,8 @@ def start_game():
         db.set_room_state(room_id, "PLAYING")
         return jsonify({"status": "started", "redirect": f"/game/{room_id}"})
     else:
-        print(f"Game start failed for room {room_id}")
-        return jsonify({"status": "error", "message": "Could not start game"}), 400
+        print(f"Game start failed for room {room_id}: {msg}")
+        return jsonify({"status": "error", "message": msg or "Could not start game"}), 400
 
 @app.route('/game/<room_id>')
 def game_view(room_id):

@@ -11,6 +11,7 @@ class DodgeballGame(BaseGame):
 
     def start_game(self):
         self.state = "PLAYING"
+        return True
 
     def handle_action(self, player_id, action_data):
         if action_data.get('type') == 'hit':
